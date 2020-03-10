@@ -14,7 +14,7 @@ export class PostCommands {
   execute(): void {
     const mode = InstallMode.service;
     const platform = this.cm.getPlatformConfig();
-    const runtime = this.cm.getRuntimeConfig(mode);
+    const runtime = this.cm.getRuntimeConfig();
 
     ObjectTools.CopyEachSource(platform, runtime);
 

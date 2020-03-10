@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import commander from "commander";
+import fs from "fs";
 import path from "path";
 import { Configurator } from "./Configurator";
 import { LinuxService } from "./LinuxService";
@@ -8,12 +9,13 @@ import { PackageJsonReader } from "./PackageJsonReader";
 import { shelly } from "./Shelly";
 import { PostCommands } from "./PostCommands";
 import { Environment } from "./Environment";
+import { ILinuxServiceConfig } from "./interfaces/ILinuxServiceConfig";
 
 export class App extends Configurator {
 
   readonly installerDir: string;
   // readonly rootDir: string;
-  repositoryDir: string;
+  projectDir: string;
 
   constructor() {
     super();
@@ -24,17 +26,28 @@ export class App extends Configurator {
 
     // this.rootDir = shelly.pwd().toString();
     shelly.silent(true);
-    const dir = shelly.exec("npm root -g").toString().split("\n")[0];
-    console.log(`NPM global directory: ${dir}`);
     shelly.silent(false);
-    this.installerDir = path.join(dir, "@dotup", "node-service-installer", "dist");
+    this.installerDir = this.getInstallerDir();
 
-    const pdir = args.args[0];
-    console.log(`Project directory: ${pdir}`);
+    this.projectDir = args.args[0] || process.cwd();
+    console.log(`Project directory: ${this.projectDir}`);
     console.log(`nosi directory: ${this.installerDir}`);
 
     // Get configuration
-    this.loadConfig(pdir);
+    this.loadConfig(this.projectDir);
+  }
+
+  getInstallerDir(): string {
+    const dir = shelly.exec("npm root -g").toString().split("\n")[0];
+    console.log(`NPM global directory: ${dir}`);
+    let installerDir = path.join(dir, "@dotup", "node-service-installer", "dist");
+
+    if(!fs.existsSync(installerDir)){
+      // DEBUG only. Ugly !
+      installerDir = process.cwd();
+    }
+
+    return installerDir;
   }
 
   async install(): Promise<void> {
@@ -43,49 +56,60 @@ export class App extends Configurator {
     shelly.cdTemp();
 
     // Load config from repository
-    this.loadConfig(this.repositoryDir);
+    this.loadConfig(this.projectDir);
 
     // Load cloned project package json
-    const preader = new PackageJsonReader(this.repositoryDir);
+    const preader = new PackageJsonReader(this.projectDir);
 
     // Get install mode (runtime service or app)
-    const mode = await this.getInstallMode();
     const runtimeConfig = this.cm.getPlatformConfig();
     runtimeConfig.bin = preader.getBin(runtimeConfig.targetPath);
 
-    // Create dotenv file
-    const env = new Environment();
     const platformConfig = this.cm.getPlatformConfig();
-    env.createFile(
+
+    // Generate dotenv file
+    const env = new Environment(
       path.join(platformConfig.targetPath, ".env"),
-      this.cm.getRuntimeConfig(mode)
+      this.cm.getRuntimeConfig()
     );
 
-    // Install service
-    if (this.cm.canInstallService(mode)) {
-      await this.installService(preader, env);
-    } else {
-      throw new Error("Service installation only on linux systems.");
-    }
-
-    // Post commands
-    const commands = new PostCommands(this.cm);
-    commands.execute();
-
-    // Done
-    shelly.echoGreen("Installation completed");
-  }
-
-  async installService(preader: PackageJsonReader, env: Environment): Promise<void> {
-
-    const runtimeConfig = this.cm.getPlatformConfig();
+    // Generate service file
     const serviceConfig = this.cm.getServiceConfig();
 
     if (serviceConfig === undefined) {
       throw new Error("serviceConfig === undefined");
     }
 
-    const serviceName = serviceConfig.serviceName;
+    const serviceFileContent = await this.generateService(serviceConfig, preader, env);
+
+    // Install service
+    if (this.cm.canInstallService()) {
+      await this.installService(serviceConfig, serviceFileContent);
+
+      // Post commands
+      const commands = new PostCommands(this.cm);
+      commands.execute();
+
+      env.createFile();
+
+      // Done
+      shelly.echoGreen("Installation completed");
+    } else {
+      shelly.echoYellow("Service installation only on linux systems.");
+      console.log(serviceFileContent);
+
+      shelly.echoGreen("Generation completed");
+    }
+  }
+
+  async generateService(serviceConfig: ILinuxServiceConfig, preader: PackageJsonReader, env: Environment): Promise<string> {
+
+    const runtimeConfig = this.cm.getPlatformConfig();
+
+    if (serviceConfig === undefined) {
+      throw new Error("serviceConfig === undefined");
+    }
+
     const targetPath = runtimeConfig.targetPath;
 
     if (
@@ -115,9 +139,17 @@ export class App extends Configurator {
     const ls = new LinuxService();
     const serviceFile = await ls.generateFile(template, service);
 
-    // Install
+    return serviceFile;
+  }
+
+  async installService(serviceConfig: ILinuxServiceConfig, serviceFileContent: string): Promise<void> {
+
+    const serviceName = serviceConfig.serviceName;
     shelly.echoGreen(`Installing linux service '${serviceName}'`);
-    ls.install(serviceConfig, serviceFile);
+
+    // Install
+    const ls = new LinuxService();
+    ls.install(serviceConfig, serviceFileContent);
   }
 
 }

@@ -14,6 +14,11 @@ import { ObjectTools } from "@dotup/dotup-ts-types";
 export class ConfigManager {
 
   config: INoinConfig;
+  platform: string;
+
+  constructor() {
+    this.platform = "linux";
+  }
 
   loadConfig(projectDir: string): INoinConfig | undefined {
     const configFile = path.join(projectDir, ".noin.json");
@@ -33,45 +38,29 @@ export class ConfigManager {
     return this.config.linux.systemd;
   }
 
-  canInstallService(mode: InstallMode): boolean {
-    if (mode === InstallMode.service) {
-      if (os.platform() === "linux") {
-        return true;
-      } else {
-        shelly.echoYellow(`Service installation not support on platform '${os.platform()}'`);
-      }
+  canInstallService(): boolean {
+    if (os.platform() === "linux") {
+      return true;
+    } else {
+      shelly.echoYellow(`Service installation not support on platform '${os.platform()}'`);
     }
 
     return false;
   }
 
   setPlatformConfig(config: Partial<IPlatformConfig>): void {
-
-    if (os.platform() === "win32") {
-      if (this.config.win32 === undefined) {
-        this.config.win32 = {} as IWindowsConfig;
-      }
-      ObjectTools.CopyEachSource(this.config.win32, config);
-    } else if (os.platform() === "linux") {
-      if (this.config.linux === undefined) {
-        this.config.linux = {} as ILinuxConfig;
-      }
-      ObjectTools.CopyEachSource(this.config.linux, config);
-    } else {
-      throw new Error(`Platform '${os.platform()}' not supported`);
+    if (this.config.linux === undefined) {
+      this.config.linux = {} as ILinuxConfig;
     }
+    ObjectTools.CopyEachSource(this.config.linux, config);
   }
 
-  getRuntimeConfig(mode: InstallMode | undefined): IAppConfig | undefined {
-    if (mode === InstallMode.app) {
-      return this.getPlatformConfig<IPlatformConfig>().app;
-    } else {
-      return this.config.linux?.systemd;
-    }
+  getRuntimeConfig(): IAppConfig | undefined {
+    return this.config.linux?.systemd;
   }
 
   getPlatformConfig<T extends IPlatformConfig>(): T {
-    const result = (this.config as any)[os.platform()];
+    const result = (this.config as any)[this.platform];
 
     if (result === undefined) {
       shelly.echoYellow(JSON.stringify(this.config, undefined, 2));
