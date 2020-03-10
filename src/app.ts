@@ -43,8 +43,7 @@ export class App extends Configurator {
     let installerDir = path.join(dir, "@dotup", "node-service-installer", "dist");
 
     if(!fs.existsSync(installerDir)){
-      // DEBUG only. Ugly !
-      installerDir = process.cwd();
+      installerDir = path.join(process.cwd(), "..");
     }
 
     return installerDir;
