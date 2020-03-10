@@ -1,0 +1,6 @@
+import * as shell from "shelljs";
+
+shell.cp("-R", "src/assets", "dist/");
+// shell.cp("-R", "src/public/fonts", "dist/public/");
+// shell.cp("-R", "src/public/images", "dist/public/");
+// console.log("NOTHING to copy!");

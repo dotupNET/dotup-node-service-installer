@@ -1,0 +1,42 @@
+{
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "javascript.preferences.quoteStyle": "single",
+  "typescript.preferences.quoteStyle": "single",
+  "mocha.options": {
+    "compilers": "ts-node/register"
+  },
+  "mocha.requires": [
+    "ts-node/register"
+  ],
+  "mocha.files.glob": "test/**/*.test.ts",
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "/.noin.json"
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "production": {
+            "type": "boolean",
+            "description": "Build and install packages in production mode",
+          },
+          "git": {
+            "type": "object",
+            "description": "Configure repository",
+            "properties": {
+              "userName": {
+                "type": "string",
+                "description": "Github user name"
+              },
+              "repositoryName": {
+                "type": "string",
+                "description": "Github repository name"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
