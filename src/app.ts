@@ -51,15 +51,21 @@ export class App extends Configurator {
     console.log(`NPM global directory: ${npmGlobalDir}`);
     let installerDir = path.join(npmGlobalDir, "@dotup", "node-service-installer");
 
-    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
+    let dirToTest = path.join(installerDir, "dist", "assets", "template.service");
+    if (!fs.existsSync(dirToTest)) {
+      console.log(`File not found: ${dirToTest}`);
       installerDir = process.cwd();
     }
 
-    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
+    dirToTest = path.join(installerDir, "assets", "template.service");
+    if (!fs.existsSync(dirToTest)) {
+      console.log(`File not found: ${dirToTest}`);
       installerDir = path.join(process.cwd(), "..");
     }
 
-    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
+    dirToTest = path.join(installerDir, "assets", "template.service");
+    if (!fs.existsSync(dirToTest)) {
+      console.log(`File not found: ${dirToTest}`);
       throw new Error("Could not find service installer assets folder.");
     }
 
