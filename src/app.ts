@@ -13,7 +13,7 @@ import { ILinuxServiceConfig } from "./interfaces/ILinuxServiceConfig";
 
 export class App extends Configurator {
 
-  readonly installerDir: string;
+  readonly serviceTemplatePath: string;
   projectDir: string;
 
   constructor() {
@@ -26,11 +26,11 @@ export class App extends Configurator {
     // this.rootDir = shelly.pwd().toString();
     // shelly.silent(true);
     // shelly.silent(false);
-    this.installerDir = this.getInstallerDir();
+    this.serviceTemplatePath = this.getInstallerDir();
     this.projectDir = this.getProjectDir(args.args[0]);
 
     console.log(`Project directory: ${this.projectDir}`);
-    console.log(`nosi directory: ${this.installerDir}`);
+    // console.log(`nosi directory: ${this.installerDir}`);
 
     // Get configuration
     this.loadConfig(this.projectDir);
@@ -49,27 +49,35 @@ export class App extends Configurator {
   getInstallerDir(): string {
     const npmGlobalDir = shelly.exec("npm root -g").toString().split("\n")[0];
     console.log(`NPM global directory: ${npmGlobalDir}`);
-    let installerDir = path.join(npmGlobalDir, "@dotup", "node-service-installer");
 
-    let dirToTest = path.join(installerDir, "dist", "assets", "template.service");
-    if (!fs.existsSync(dirToTest)) {
-      console.log(`File not found: ${dirToTest}`);
-      installerDir = process.cwd();
+    // Global installation path. nosi called from anywhere
+    let dirToTest = path.join(npmGlobalDir, "@dotup", "node-service-installer");
+    dirToTest = path.join(dirToTest, "dist", "assets", "template.service");
+    if (fs.existsSync(dirToTest)) {
+      return dirToTest;
     }
 
-    dirToTest = path.join(installerDir, "assets", "template.service");
-    if (!fs.existsSync(dirToTest)) {
+    console.log(`File not found: ${dirToTest}`);
+
+    if (process.env.NODE_ENV !== "production") {
+
+      dirToTest = path.join(process.cwd(), "assets", "template.service");
+      if (fs.existsSync(dirToTest)) {
+        return dirToTest;
+      }
+
       console.log(`File not found: ${dirToTest}`);
-      installerDir = path.join(process.cwd(), "..");
+      dirToTest = path.join(process.cwd(), "..");
+
+      dirToTest = path.join(dirToTest, "assets", "template.service");
+      if (fs.existsSync(dirToTest)) {
+        return dirToTest;
+      }
+
+      console.log(`File not found: ${dirToTest}`);
     }
 
-    dirToTest = path.join(installerDir, "assets", "template.service");
-    if (!fs.existsSync(dirToTest)) {
-      console.log(`File not found: ${dirToTest}`);
-      throw new Error("Could not find service installer assets folder.");
-    }
-
-    return installerDir;
+    throw new Error("Could not find service installer assets folder.");
   }
 
   async install(): Promise<void> {
@@ -146,7 +154,7 @@ export class App extends Configurator {
     serviceConfig.WorkingDirectory = preader.getWorkingDirectory(targetPath);
 
     const service = await this.getLinuxService();
-    const template = path.join(this.installerDir, "assets", "template.service");
+    const template = path.join(this.serviceTemplatePath);
 
     if (service === undefined) {
       throw new Error("service === undefined");
