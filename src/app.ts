@@ -128,6 +128,10 @@ export class App extends Configurator {
       shelly.echoYellow("Service installation only on linux systems.");
       console.log(serviceFileContent);
 
+      // Post commands
+      const commands = new PostCommands(this.cm);
+      commands.print();
+
       shelly.echoGreen("Generation completed");
     }
   }

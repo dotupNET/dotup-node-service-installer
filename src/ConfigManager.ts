@@ -25,6 +25,9 @@ export class ConfigManager {
       // Config from file
       shelly.echoGrey(`Loading configuration from ${configFile}`);
       const fileConfig = JSON.parse((fs.readFileSync(configFile, "utf8"))) as INoinConfig;
+
+      fileConfig.linux!.targetPath = projectDir;
+
       this.config = fileConfig;
 
       return this.config;
