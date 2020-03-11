@@ -14,7 +14,6 @@ import { ILinuxServiceConfig } from "./interfaces/ILinuxServiceConfig";
 export class App extends Configurator {
 
   readonly installerDir: string;
-  // readonly rootDir: string;
   projectDir: string;
 
   constructor() {
@@ -25,11 +24,11 @@ export class App extends Configurator {
       .parse(process.argv || []);
 
     // this.rootDir = shelly.pwd().toString();
-    shelly.silent(true);
-    shelly.silent(false);
+    // shelly.silent(true);
+    // shelly.silent(false);
     this.installerDir = this.getInstallerDir();
+    this.projectDir = this.getProjectDir(args.args[0]);
 
-    this.projectDir = args.args[0] || process.cwd();
     console.log(`Project directory: ${this.projectDir}`);
     console.log(`nosi directory: ${this.installerDir}`);
 
@@ -37,13 +36,31 @@ export class App extends Configurator {
     this.loadConfig(this.projectDir);
   }
 
-  getInstallerDir(): string {
-    const dir = shelly.exec("npm root -g").toString().split("\n")[0];
-    console.log(`NPM global directory: ${dir}`);
-    let installerDir = path.join(dir, "@dotup", "node-service-installer", "dist");
+  getProjectDir(argsDir?: string): string {
+    let dir = argsDir || process.cwd();
 
-    if(!fs.existsSync(installerDir)){
+    if (!fs.existsSync(path.join(dir, "package.json"))) {
+      throw new Error(`Could not find package.json file. ${dir}`);
+    }
+
+    return dir;
+  }
+
+  getInstallerDir(): string {
+    const npmGlobalDir = shelly.exec("npm root -g").toString().split("\n")[0];
+    console.log(`NPM global directory: ${npmGlobalDir}`);
+    let installerDir = path.join(npmGlobalDir, "@dotup", "node-service-installer");
+
+    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
+      installerDir = process.cwd();
+    }
+
+    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
       installerDir = path.join(process.cwd(), "..");
+    }
+
+    if (!fs.existsSync(path.join(installerDir, "assets", "template.service"))) {
+      throw new Error("Could not find service installer assets folder.");
     }
 
     return installerDir;
@@ -62,13 +79,13 @@ export class App extends Configurator {
 
     // Get install mode (runtime service or app)
     const runtimeConfig = this.cm.getPlatformConfig();
-    runtimeConfig.bin = preader.getBin(runtimeConfig.targetPath);
+    runtimeConfig.bin = preader.getServiceBinPath(this.projectDir);
 
     const platformConfig = this.cm.getPlatformConfig();
 
     // Generate dotenv file
     const env = new Environment(
-      path.join(platformConfig.targetPath, ".env"),
+      path.join(this.projectDir, ".env"),
       this.cm.getRuntimeConfig()
     );
 
@@ -109,23 +126,18 @@ export class App extends Configurator {
       throw new Error("serviceConfig === undefined");
     }
 
-    const targetPath = runtimeConfig.targetPath;
+    const targetPath = this.projectDir;
 
-    if (
-      serviceConfig.ExecStart === undefined ||
-      serviceConfig.WorkingDirectory === undefined
-    ) {
-      const node = shelly.which("node");
-      const bin = preader.getBin(targetPath);
-      let exec = `${node}`;
-      if (env.filePath !== undefined) {
-        exec = `${exec} -r dotenv/config ${bin} dotenv_config_path=${path.join(targetPath, ".env")}`;
-      } else {
-        exec = `${exec} ${bin}`;
-      }
-      serviceConfig.ExecStart = exec;
-      serviceConfig.WorkingDirectory = preader.getPathToExec(targetPath);
+    const node = shelly.which("node");
+    const bin = preader.getServiceBinPath(targetPath);
+    let exec = `${node}`;
+    if (env.filePath !== undefined) {
+      exec = `${exec} -r dotenv/config ${bin} dotenv_config_path=${path.join(targetPath, ".env")}`;
+    } else {
+      exec = `${exec} ${bin}`;
     }
+    serviceConfig.ExecStart = exec;
+    serviceConfig.WorkingDirectory = preader.getWorkingDirectory(targetPath);
 
     const service = await this.getLinuxService();
     const template = path.join(this.installerDir, "assets", "template.service");

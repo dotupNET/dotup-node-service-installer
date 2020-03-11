@@ -5,9 +5,8 @@ import { InstallMode } from "./Enumerations";
 import { ILinuxConfig } from "./interfaces/ILinuxConfig";
 import { ILinuxServiceConfig } from "./interfaces/ILinuxServiceConfig";
 import { INoinConfig } from "./interfaces/INoinConfig";
-import { IPlatformConfig } from "./interfaces/IPlatformConfig";
+// import { IPlatformConfig } from "./interfaces/IPlatformConfig";
 import { IAppConfig } from "./interfaces/IAppConfig";
-import { IWindowsConfig } from "./interfaces/IWindowsConfig";
 import { shelly } from "./Shelly";
 import { ObjectTools } from "@dotup/dotup-ts-types";
 
@@ -48,7 +47,7 @@ export class ConfigManager {
     return false;
   }
 
-  setPlatformConfig(config: Partial<IPlatformConfig>): void {
+  setPlatformConfig(config: Partial<ILinuxConfig>): void {
     if (this.config.linux === undefined) {
       this.config.linux = {} as ILinuxConfig;
     }
@@ -59,7 +58,7 @@ export class ConfigManager {
     return this.config.linux?.systemd;
   }
 
-  getPlatformConfig<T extends IPlatformConfig>(): T {
+  getPlatformConfig(): ILinuxConfig {
     const result = (this.config as any)[this.platform];
 
     if (result === undefined) {

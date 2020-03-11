@@ -18,12 +18,11 @@ export class Configurator {
   }
 
   async getInstallMode(): Promise<InstallMode> {
-    const runtime = this.cm.getPlatformConfig<ILinuxConfig>();
+    const runtime = this.cm.getPlatformConfig();
 
     const mode = InstallMode.service;
 
     // service
-    runtime.app = undefined;
     if (runtime.systemd === undefined) {
       // const name = await Enquirer.getServiceName();
       runtime.systemd = {} as ILinuxServiceConfig;

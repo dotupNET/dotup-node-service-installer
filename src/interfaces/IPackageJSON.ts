@@ -23,6 +23,7 @@ export interface IPackageJSON {
   readonly main?: string;
 
   readonly bin?: string | IBin;
+  readonly systemd?: string | IBin;
 
   readonly man?: string | string[];
 

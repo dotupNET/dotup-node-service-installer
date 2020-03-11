@@ -11,26 +11,30 @@ export class PackageJsonReader {
     this.packageJson = JSON.parse((fs.readFileSync(fileName, "utf8"))) as IPackageJSON;
   }
 
-  getBin(root: string): string {
+
+  getServiceBinPath(root: string): string {
     let bin: string;
 
-    if (this.packageJson.bin === undefined) {
-      bin = this.packageJson.main || "";
+    if (this.packageJson.systemd === undefined) {
+      bin = this.packageJson.systemd || "";
     } else {
-      if (typeof this.packageJson.bin === "string") {
-        bin = this.packageJson.bin;
+      if (this.packageJson.bin === undefined) {
+        bin = this.packageJson.main || "";
       } else {
-        bin = this.packageJson.bin[Object.keys(this.packageJson.bin)[0]];
+        if (typeof this.packageJson.bin === "string") {
+          bin = this.packageJson.bin;
+        } else {
+          bin = this.packageJson.bin[Object.keys(this.packageJson.bin)[0]];
+        }
       }
     }
 
     return path.join(root, bin);
   }
 
-  getPathToExec(root: string): string {
-    const exec = this.getBin(root);
+  getWorkingDirectory(projectDir: string): string {
+    const exec = this.getServiceBinPath(projectDir);
 
     return path.dirname(exec);
   }
-
 }
