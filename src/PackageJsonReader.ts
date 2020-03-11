@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { IPackageJSON } from "./interfaces/IPackageJSON";
+import { IPackageJSON, IBin } from "./interfaces/IPackageJSON";
 
 export class PackageJsonReader {
 
@@ -13,20 +13,27 @@ export class PackageJsonReader {
 
 
   getServiceBinPath(root: string): string {
-    let bin: string;
+    let bin: string | IBin | undefined;
 
-    if (this.packageJson.systemd === undefined) {
-      bin = this.packageJson.systemd || "";
-    } else {
-      if (this.packageJson.bin === undefined) {
-        bin = this.packageJson.main || "";
-      } else {
-        if (typeof this.packageJson.bin === "string") {
-          bin = this.packageJson.bin;
-        } else {
-          bin = this.packageJson.bin[Object.keys(this.packageJson.bin)[0]];
-        }
-      }
+    if (this.packageJson.systemd !== undefined) {
+      // systemd
+      bin = this.packageJson.systemd;
+    }
+    else if (this.packageJson.bin !== undefined) {
+      // bin
+      bin = this.packageJson.systemd;
+    }
+    else if (this.packageJson.main !== undefined) {
+      // main
+      bin = this.packageJson.main;
+    }
+
+    if (bin === undefined) {
+      throw new Error("Could not find systemd entry in package.json");
+    }
+
+    if (typeof bin !== "string") {
+      bin = bin[Object.keys(bin)[0]];
     }
 
     return path.join(root, bin);

@@ -37,7 +37,7 @@ export class App extends Configurator {
   }
 
   getProjectDir(argsDir?: string): string {
-    let dir = argsDir || process.cwd();
+    const dir = argsDir || process.cwd();
 
     if (!fs.existsSync(path.join(dir, "package.json"))) {
       throw new Error(`Could not find package.json file. ${dir}`);
